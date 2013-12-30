@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Grid {
 
@@ -81,7 +82,7 @@ public class Grid {
 
 
 			if(_mode == CHECK_TILES){
-				if(CheckForMatches(_tile1,_tile2)){
+				if(_tileList[_tile1].tileContent != _tileList[_tile2].tileContent && CheckForMatches(_tile1,_tile2)){
 					//HandleMatchesFound
 					animationsCompleted = true;
 				}
@@ -122,7 +123,9 @@ public class Grid {
 	}
 
 	private bool CheckForMatches(int tile1Index, int tile2Index){
-		return SubCheck(tile1Index) ||	SubCheck(tile2Index);
+		bool tile1Matches = SubCheck(tile1Index);
+		bool tile2Matches = SubCheck(tile2Index);
+		return tile1Matches || tile2Matches;	
 	}
 
 	private bool SubCheck(int tileIndex){
@@ -181,11 +184,66 @@ public class Grid {
 			}
 		}
 		while(subMatchFound);
-		if(leftMatches + rightMatches > 1 || aboveMatches + belowMatches > 1){
+		List<int> _tilesToRemove = new List<int>();
+		int matchIndex;
+		if(leftMatches + rightMatches > 1){
+			for(matchIndex = tileIndex-leftMatches; matchIndex <= tileIndex+rightMatches; matchIndex++){
+				_tilesToRemove.Add(matchIndex);
+			}
 			//3 or more have been matched
 			matchFound = true;
 		}
+		if(aboveMatches + belowMatches > 1){
+			for(matchIndex = tileIndex-(aboveMatches*_columnCount); matchIndex <= tileIndex+(belowMatches*_columnCount); matchIndex+=_columnCount){
+				_tilesToRemove.Add(matchIndex);
+			}
+			//3 or more have been matched
+			matchFound = true;
+		}
+		SlideTilesDown(_tilesToRemove);
+//		foreach(int index in _tilesToRemove){
+//			_tileList[index].gameObject.SetActive(false);
+//		}
 		return matchFound;
 		
+	}
+
+	private void SlideTilesDown(List<int> tilesToRemove){
+		foreach(int index in tilesToRemove){
+			_tileList[index].gameObject.SetActive(false);
+			_tileList[index] = null;
+		}
+		int tileListIndex;
+		for(tileListIndex = _tileList.Length-1; tileListIndex >= 0; tileListIndex--){
+			if(_tileList[tileListIndex] == null){
+				int tile = FindTileAbove(tileListIndex);
+				if(tile != -1){
+					_tileList[tileListIndex] = _tileList[tile];
+					_tileList[tile] = null;
+					_tileList[tileListIndex].SetPosition(CalculateTileX(tileListIndex),CalculateTileY(tileListIndex));
+				}
+			}
+		}
+		CreateNewTiles();
+	}
+
+	private int FindTileAbove(int startIndex){
+		int line = -1;
+		for(int index = startIndex - _columnCount; index >= 0; index-=_columnCount){	
+			if(_tileList[index] != null){
+				line = index;
+				break;
+			}
+		}
+		return line;
+	}
+
+	private void CreateNewTiles(){
+		int tileListIndex;
+		for(tileListIndex = _tileList.Length-1; tileListIndex >= 0; tileListIndex--){
+			if(_tileList[tileListIndex] == null){
+				CreateTile(tileListIndex);
+			}
+		}
 	}
 }
