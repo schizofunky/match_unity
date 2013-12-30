@@ -3,7 +3,7 @@ using System.Collections;
 
 public class Tile {
 	
-	public int tileIndex {get; private set;}
+	public int tileContent {get; private set;}
 
 	public GameObject gameObject {get; private set;}
 
@@ -15,7 +15,7 @@ public class Tile {
 		gameObject.name = "Tile"+id;
 		gameObject.AddComponent("SpriteRenderer");
 		gameObject.GetComponent<SpriteRenderer>().sprite = sprite;
-		this.tileIndex = tileIndex;
+		tileContent = tileIndex;
 	}
 
 	public void SetPosition(float x, float y){

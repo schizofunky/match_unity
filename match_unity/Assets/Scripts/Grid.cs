@@ -17,6 +17,9 @@ public class Grid {
 	private Sprite[] _tileSprites;
 	private Tile[] _tileList;
 
+	private int _tile1;
+	private int _tile2;
+
 	private TileAnimation _tile1Animation;
 	private TileAnimation _tile2Animation;
 
@@ -55,11 +58,18 @@ public class Grid {
 	}
 
 	public void SwapTiles(int tile1Index, int tile2Index){
+		_tile1 = tile1Index;
+		_tile2 = tile2Index;
 		GameObject Tile1 = _tileList[tile1Index].gameObject;
 		GameObject Tile2 = _tileList[tile2Index].gameObject;
 		//create animations for both tiles
 		_tile1Animation = new TileAnimation(Tile1, Tile2.transform.position,TILE_MOVE_SPEED);
 		_tile2Animation = new TileAnimation(Tile2, Tile1.transform.position,TILE_MOVE_SPEED);
+
+		//swap the positions in the array
+		Tile tempTile = _tileList[tile1Index];
+		_tileList[tile1Index] = _tileList[tile2Index];
+		_tileList[tile2Index] = tempTile;
 		_mode = CHECK_TILES;
 	}
 
@@ -71,13 +81,20 @@ public class Grid {
 
 
 			if(_mode == CHECK_TILES){
-				if(false){
+				if(CheckForMatches(_tile1,_tile2)){
 					//HandleMatchesFound
+					animationsCompleted = true;
 				}
 				else{
 					_mode = REVERSE_TILES;
+					//reverse the animations
 					_tile1Animation.ReverseAnimation();
 					_tile2Animation.ReverseAnimation();
+
+					//swap them back in the array
+					Tile tempTile = _tileList[_tile1];
+					_tileList[_tile1] = _tileList[_tile2];
+					_tileList[_tile2] = tempTile;
 				}
 			}
 			else if(_mode == REVERSE_TILES){
@@ -102,5 +119,73 @@ public class Grid {
 	
 	private float CalculateTileY(int index){		
 		return START_Y - (SPACING * Mathf.Floor(index / _columnCount));
+	}
+
+	private bool CheckForMatches(int tile1Index, int tile2Index){
+		return SubCheck(tile1Index) ||	SubCheck(tile2Index);
+	}
+
+	private bool SubCheck(int tileIndex){
+		int startTileContent = _tileList[tileIndex].tileContent;
+		int currentIndex = tileIndex;
+		int leftMatches = 0;
+		int rightMatches = 0;
+		int aboveMatches = 0;
+		int belowMatches = 0;
+		bool matchFound = false;
+		bool subMatchFound;
+		do{
+			if(currentIndex % _columnCount == 0){
+				break;
+			}
+			currentIndex = currentIndex - 1;
+			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
+			if(subMatchFound){
+				leftMatches++;
+			}
+		}
+		while(subMatchFound);	
+		currentIndex = tileIndex;		
+		do{
+			currentIndex = currentIndex + 1;
+			if(currentIndex % _columnCount == 0){
+				break;
+			}
+			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
+			if(subMatchFound){
+				rightMatches++;
+			}
+		}
+		while(subMatchFound);
+		currentIndex = tileIndex;		
+		do{
+			currentIndex = currentIndex + _columnCount;
+			if(currentIndex >= _tileList.Length){
+				break;
+			}
+			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
+			if(subMatchFound){
+				belowMatches++;
+			}
+		}
+		while(subMatchFound);
+		currentIndex = tileIndex;		
+		do{
+			currentIndex = currentIndex - _columnCount;
+			if(currentIndex < 0){
+				break;
+			}
+			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
+			if(subMatchFound){
+				aboveMatches++;
+			}
+		}
+		while(subMatchFound);
+		if(leftMatches + rightMatches > 1 || aboveMatches + belowMatches > 1){
+			//3 or more have been matched
+			matchFound = true;
+		}
+		return matchFound;
+		
 	}
 }
