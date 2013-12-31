@@ -11,6 +11,8 @@ public class Grid {
 
 	private const int CHECK_TILES = 0;
 	private const int REVERSE_TILES = 1;
+	private const int REMOVE_MATCHES = 2;
+	private const int REFILL_GRID = 3;
 
 	private int _tileCounter = 0;
 	private int _rowCount;
@@ -22,6 +24,7 @@ public class Grid {
 	private int _tile2;
 
 	private List<TileAnimation> _tileAnimations;
+	private List<int> _currentMatches;
 
 	private int _mode;
 
@@ -37,7 +40,7 @@ public class Grid {
 		_tileList = new Tile[totalTiles];
 		int i;
 		for(i = 0; i < totalTiles; i++){
-			CreateTile(_tileCounter++);
+			CreateTile(_tileCounter++,0);
 		}
 	}
 
@@ -83,10 +86,14 @@ public class Grid {
 		if(allAnimationsCompleted){
 
 			if(_mode == CHECK_TILES){
-				if(_tileList[_tile1].tileContent != _tileList[_tile2].tileContent && CheckForMatches(_tile1,_tile2)){
-					//HandleMatchesFound
-					_tileAnimations.Clear();
-					animationModeFinished = true;
+				if(_tileList[_tile1].tileContent != _tileList[_tile2].tileContent){
+					_currentMatches = CheckForMatches(_tile1,_tile2);
+					if(_currentMatches.Capacity > 0){
+						_tileAnimations.Clear();
+						RemoveMatchedTiles(_currentMatches);
+						_mode = REMOVE_MATCHES;
+						//matches found
+					}
 				}
 				else{
 					_mode = REVERSE_TILES;
@@ -105,16 +112,33 @@ public class Grid {
 				animationModeFinished = true;
 				_tileAnimations.Clear();
 			}
+			else if(_mode == REMOVE_MATCHES){
+				_tileAnimations.Clear();
+				foreach(int index in _currentMatches){
+					_tileList[index].gameObject.SetActive(false);
+					_tileList[index] = null;
+				}
+				RefillGrid();
+				_mode = REFILL_GRID; 
+			}
+			else if(_mode == REFILL_GRID){				
+				_tileAnimations.Clear();				
+				animationModeFinished = true;
+			}
 		
 		}
 		return animationModeFinished;
 	}
 	
-	private void CreateTile(int index){
+	private void CreateTile(int index, int animationRowOffset){
 		int tileIndex = (int)Mathf.Round(Random.value * (_tileSprites.Length-1));
 		Tile tile = new Tile(index, _tileSprites[tileIndex],tileIndex);
-		tile.SetPosition(CalculateTileX(index),CalculateTileY(index));
+		float destinationX = CalculateTileX(index);
+		float destinationY = CalculateTileY(index);
+		Vector3 animateFrom = new Vector3(destinationX,destinationY,0);
+		tile.SetPosition(destinationX,destinationY+(animationRowOffset*SPACING));
 		_tileList[index] = tile;
+		_tileAnimations.Add(new TileAnimation(_tileList[index].gameObject, animateFrom,TILE_MOVE_SPEED,TileAnimation.TRANSFORM));
 	}
 	
 	private float CalculateTileX(int index){
@@ -125,21 +149,22 @@ public class Grid {
 		return START_Y - (SPACING * Mathf.Floor(index / _columnCount));
 	}
 
-	private bool CheckForMatches(int tile1Index, int tile2Index){
+	private List<int> CheckForMatches(int tile1Index, int tile2Index){
 		MatchChecker matchChecker = new MatchChecker();
 		List<int> tilesToCheck = new List<int>();
 		tilesToCheck.Add(tile1Index);
 		tilesToCheck.Add(tile2Index);
 		List<int> matchedTiles = matchChecker.CheckForMatches(_tileList,tilesToCheck,_columnCount);
-		SlideTilesDown(matchedTiles);
-		return matchedTiles.Capacity > 0;
+		return matchedTiles;
 	}
 
-	private void SlideTilesDown(List<int> tilesToRemove){
-		foreach(int index in tilesToRemove){
-			_tileList[index].gameObject.SetActive(false);
-			_tileList[index] = null;
+	private void RemoveMatchedTiles(List<int> matchedTiles){
+		foreach(int index in matchedTiles){
+			_tileAnimations.Add(new TileAnimation(_tileList[index].gameObject, new Vector3(0,0,0),TILE_MOVE_SPEED,TileAnimation.SCALE));
 		}
+	}
+
+	private void RefillGrid(){
 		int tileListIndex;
 		for(tileListIndex = _tileList.Length-1; tileListIndex >= 0; tileListIndex--){
 			if(_tileList[tileListIndex] == null){
@@ -147,11 +172,11 @@ public class Grid {
 				if(tile != -1){
 					_tileList[tileListIndex] = _tileList[tile];
 					_tileList[tile] = null;
-					_tileList[tileListIndex].SetPosition(CalculateTileX(tileListIndex),CalculateTileY(tileListIndex));
+					_tileAnimations.Add(new TileAnimation(_tileList[tileListIndex].gameObject, new Vector3(CalculateTileX(tileListIndex),CalculateTileY(tileListIndex),0),TILE_MOVE_SPEED,TileAnimation.TRANSFORM));
 				}
 			}
 		}
-		CreateNewTiles();
+		GenerateNewTiles();
 	}
 
 	private int FindTileAbove(int startIndex){
@@ -165,11 +190,18 @@ public class Grid {
 		return line;
 	}
 
-	private void CreateNewTiles(){
-		int tileListIndex;
-		for(tileListIndex = _tileList.Length-1; tileListIndex >= 0; tileListIndex--){
-			if(_tileList[tileListIndex] == null){
-				CreateTile(tileListIndex);
+	private void GenerateNewTiles(){
+		for(int c = 0; c < _columnCount; c++){
+			for(int r = _rowCount-1; r >= 0; r--){
+				int tileIndex = (r*_columnCount) + c;
+				if(_tileList[tileIndex] == null){
+					int numberOfTilestoCreate = (int)Mathf.Ceil(((float)tileIndex+1)/_columnCount);
+					Debug.Log(r+" "+c+" "+numberOfTilestoCreate+" "+tileIndex);
+					for(int t = 0; t < numberOfTilestoCreate; t++){
+						CreateTile(tileIndex -(t*_columnCount),numberOfTilestoCreate);
+					}
+					break;
+				}
 			}
 		}
 	}

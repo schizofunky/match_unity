@@ -18,6 +18,10 @@ public class Tile {
 		tileContent = tileIndex;
 	}
 
+	~Tile(){
+		//Debug.Log("Tile was destroyed");
+	}
+
 	public void SetPosition(float x, float y){
 		gameObject.transform.position = new Vector3(x,y,1);
 		gameObject.transform.localScale = new Vector3(2,2,1);
