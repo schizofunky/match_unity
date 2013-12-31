@@ -21,8 +21,7 @@ public class Grid {
 	private int _tile1;
 	private int _tile2;
 
-	private TileAnimation _tile1Animation;
-	private TileAnimation _tile2Animation;
+	private List<TileAnimation> _tileAnimations;
 
 	private int _mode;
 
@@ -30,6 +29,7 @@ public class Grid {
 		_rowCount = rowCount; 
 		_columnCount = columnCount; 
 		_tileSprites = tileSprites;
+		_tileAnimations = new List<TileAnimation>();
 	}
 
 	public void CreateTiles(){ 
@@ -64,9 +64,8 @@ public class Grid {
 		GameObject Tile1 = _tileList[tile1Index].gameObject;
 		GameObject Tile2 = _tileList[tile2Index].gameObject;
 		//create animations for both tiles
-		_tile1Animation = new TileAnimation(Tile1, Tile2.transform.position,TILE_MOVE_SPEED);
-		_tile2Animation = new TileAnimation(Tile2, Tile1.transform.position,TILE_MOVE_SPEED);
-
+		_tileAnimations.Add(new TileAnimation(Tile1, Tile2.transform.position,TILE_MOVE_SPEED,TileAnimation.TRANSFORM));
+		_tileAnimations.Add(new TileAnimation(Tile2, Tile1.transform.position,TILE_MOVE_SPEED,TileAnimation.TRANSFORM));
 		//swap the positions in the array
 		Tile tempTile = _tileList[tile1Index];
 		_tileList[tile1Index] = _tileList[tile2Index];
@@ -75,22 +74,26 @@ public class Grid {
 	}
 
 	public bool AnimateTiles(){
-		bool animationsCompleted = false;
-		_tile1Animation.UpdateAnimation();
-		_tile2Animation.UpdateAnimation();
-		if(_tile1Animation.IsCompleted()){
-
+		bool animationModeFinished = false;
+		bool allAnimationsCompleted = true;
+		foreach(TileAnimation animation in _tileAnimations){
+			animation.UpdateAnimation();
+			allAnimationsCompleted = allAnimationsCompleted && animation.IsCompleted();
+		}
+		if(allAnimationsCompleted){
 
 			if(_mode == CHECK_TILES){
 				if(_tileList[_tile1].tileContent != _tileList[_tile2].tileContent && CheckForMatches(_tile1,_tile2)){
 					//HandleMatchesFound
-					animationsCompleted = true;
+					_tileAnimations.Clear();
+					animationModeFinished = true;
 				}
 				else{
 					_mode = REVERSE_TILES;
 					//reverse the animations
-					_tile1Animation.ReverseAnimation();
-					_tile2Animation.ReverseAnimation();
+					foreach(TileAnimation animation in _tileAnimations){
+						animation.ReverseAnimation();
+					}
 
 					//swap them back in the array
 					Tile tempTile = _tileList[_tile1];
@@ -99,11 +102,12 @@ public class Grid {
 				}
 			}
 			else if(_mode == REVERSE_TILES){
-				animationsCompleted = true;
+				animationModeFinished = true;
+				_tileAnimations.Clear();
 			}
 		
 		}
-		return animationsCompleted;
+		return animationModeFinished;
 	}
 	
 	private void CreateTile(int index){
@@ -111,7 +115,6 @@ public class Grid {
 		Tile tile = new Tile(index, _tileSprites[tileIndex],tileIndex);
 		tile.SetPosition(CalculateTileX(index),CalculateTileY(index));
 		_tileList[index] = tile;
-		//Debug.Log(tile.tileIndex);
 	}
 	
 	private float CalculateTileX(int index){
@@ -123,89 +126,13 @@ public class Grid {
 	}
 
 	private bool CheckForMatches(int tile1Index, int tile2Index){
-		bool tile1Matches = SubCheck(tile1Index);
-		bool tile2Matches = SubCheck(tile2Index);
-		return tile1Matches || tile2Matches;	
-	}
-
-	private bool SubCheck(int tileIndex){
-		int startTileContent = _tileList[tileIndex].tileContent;
-		int currentIndex = tileIndex;
-		int leftMatches = 0;
-		int rightMatches = 0;
-		int aboveMatches = 0;
-		int belowMatches = 0;
-		bool matchFound = false;
-		bool subMatchFound;
-		do{
-			if(currentIndex % _columnCount == 0){
-				break;
-			}
-			currentIndex = currentIndex - 1;
-			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
-			if(subMatchFound){
-				leftMatches++;
-			}
-		}
-		while(subMatchFound);	
-		currentIndex = tileIndex;		
-		do{
-			currentIndex = currentIndex + 1;
-			if(currentIndex % _columnCount == 0){
-				break;
-			}
-			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
-			if(subMatchFound){
-				rightMatches++;
-			}
-		}
-		while(subMatchFound);
-		currentIndex = tileIndex;		
-		do{
-			currentIndex = currentIndex + _columnCount;
-			if(currentIndex >= _tileList.Length){
-				break;
-			}
-			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
-			if(subMatchFound){
-				belowMatches++;
-			}
-		}
-		while(subMatchFound);
-		currentIndex = tileIndex;		
-		do{
-			currentIndex = currentIndex - _columnCount;
-			if(currentIndex < 0){
-				break;
-			}
-			subMatchFound = (_tileList[currentIndex].tileContent == startTileContent); 
-			if(subMatchFound){
-				aboveMatches++;
-			}
-		}
-		while(subMatchFound);
-		List<int> _tilesToRemove = new List<int>();
-		int matchIndex;
-		if(leftMatches + rightMatches > 1){
-			for(matchIndex = tileIndex-leftMatches; matchIndex <= tileIndex+rightMatches; matchIndex++){
-				_tilesToRemove.Add(matchIndex);
-			}
-			//3 or more have been matched
-			matchFound = true;
-		}
-		if(aboveMatches + belowMatches > 1){
-			for(matchIndex = tileIndex-(aboveMatches*_columnCount); matchIndex <= tileIndex+(belowMatches*_columnCount); matchIndex+=_columnCount){
-				_tilesToRemove.Add(matchIndex);
-			}
-			//3 or more have been matched
-			matchFound = true;
-		}
-		SlideTilesDown(_tilesToRemove);
-//		foreach(int index in _tilesToRemove){
-//			_tileList[index].gameObject.SetActive(false);
-//		}
-		return matchFound;
-		
+		MatchChecker matchChecker = new MatchChecker();
+		List<int> tilesToCheck = new List<int>();
+		tilesToCheck.Add(tile1Index);
+		tilesToCheck.Add(tile2Index);
+		List<int> matchedTiles = matchChecker.CheckForMatches(_tileList,tilesToCheck,_columnCount);
+		SlideTilesDown(matchedTiles);
+		return matchedTiles.Capacity > 0;
 	}
 
 	private void SlideTilesDown(List<int> tilesToRemove){
