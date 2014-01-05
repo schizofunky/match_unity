@@ -47,4 +47,8 @@ public class Tile {
 			gameObject.transform.localScale = new Vector3(2,2,1);
 		}
 	}
+
+    public void Highlight(float amount) {
+        gameObject.renderer.material.color = new Color(1, 1, 1, amount);
+    }
 }

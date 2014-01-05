@@ -40,13 +40,25 @@ public class Grid {
 	}
 
 	public void CreateTiles(){
-        GenerateGridWithoutMatches();/*
-		int totalTiles = _rowCount * _columnCount;		
-		_tileList = new Tile[totalTiles];
-		int i;
-		for(i = 0; i < totalTiles; i++){
-            CreateTile(_tileCounter++, 0, _tileSprites.ToArray());
-		}*/
+        int totalTiles = _rowCount * _columnCount;
+        List<int> usableSprites;
+        _tileList = new Tile[totalTiles];
+        int i;
+        int leftIndex;
+        int topIndex;
+        for (i = 0; i < totalTiles; i++){
+            leftIndex = i - 2;
+            topIndex = i - _columnCount;
+            //make sure that the tile is not the same as the tile 2 to the left and 2 above
+            usableSprites = Enumerable.Range(0, _tileSprites.Count).ToList<int>();
+            if (leftIndex > -1){
+                usableSprites.Remove(_tileList[leftIndex].tileContent);
+            }
+            if (topIndex > -1){
+                usableSprites.Remove(_tileList[topIndex].tileContent);
+            }
+            CreateTile(_tileCounter++, 0, usableSprites.ToArray());
+        }
 	}
 
 	public int GetTileIndexAtXY(float x, float y){
@@ -104,6 +116,9 @@ public class Grid {
 			else if(_mode == REVERSE_TILES){
 				animationModeFinished = true;
 				_tileAnimations.Clear();
+                if (!DoMatchesExist()) {
+                    Debug.Log("NO MORE MATCHES EXIST!!!!");
+                }
 			}
 			else if(_mode == REMOVE_MATCHES){
 				_tileAnimations.Clear();
@@ -127,6 +142,9 @@ public class Grid {
                 if (_currentMatches.Count == 0)
                 {
                     animationModeFinished = true;
+                    if (!DoMatchesExist()) {
+                        Debug.Log("NO MORE MATCHES EXIST!!!!");
+                    }
                 }
             }
 		
@@ -229,7 +247,7 @@ public class Grid {
 					int numberOfTilestoCreate = (int)Mathf.Ceil(((float)tileIndex+1)/_columnCount);
 					for(int t = 0; t < numberOfTilestoCreate; t++){
                         newIndex = tileIndex -(t*_columnCount);
-                        CreateTile(newIndex, numberOfTilestoCreate, Enumerable.Range(0, _tileSprites.Count - 1).ToArray());
+                        CreateTile(newIndex, numberOfTilestoCreate, Enumerable.Range(0, _tileSprites.Count).ToArray());
                         modifiedTiles.Add(newIndex);
 					}
 					break;
@@ -238,28 +256,151 @@ public class Grid {
 		}
 	}
 
-    private void GenerateGridWithoutMatches()
-    {
-        int totalTiles = _rowCount * _columnCount;
-        List<int> usableSprites;
-        _tileList = new Tile[totalTiles];
-        int i;
-        for (i = 0; i < totalTiles; i++)
-        {
-            int leftIndex = i - 2;
-            int topIndex = i - _columnCount;
-            usableSprites = Enumerable.Range(0, _tileSprites.Count - 1).ToList<int>();
-            if (leftIndex > -1)
-            {
-                usableSprites.Remove(_tileList[leftIndex].tileContent);
-            }
-            if (topIndex > -1)
-            {
-                usableSprites.Remove(_tileList[topIndex].tileContent);
-            }
-            //make sure that the tile is not the same as the tile 2 to the left and 2 above
-            CreateTile(_tileCounter++, 0, usableSprites.ToArray());
+    private bool DoMatchesExist() {
+        foreach (Tile tile in _tileList) {
+            tile.Highlight(1);
         }
+        int c,row,s;
+        for (row = 0; row < _rowCount; row++) {
+            for (c = 0; c < _columnCount; c++) {
+                s = c + (row * _columnCount);
+                //Check to the right, start with 3 along then check the middle 2 
+                if (c < _columnCount - 3) {
+                    if (_tileList[s].tileContent == _tileList[s + 3].tileContent) {
 
+                        if (_tileList[s].tileContent == _tileList[s + 1].tileContent || _tileList[s].tileContent == _tileList[s + 2].tileContent) {
+                            _tileList[s].Highlight(0.5f);
+                            _tileList[s + 3].Highlight(0.5f);
+                            _tileList[s + 1].Highlight(0.5f);
+                            _tileList[s + 2].Highlight(0.5f);
+                            return true;
+                        }
+                    }
+                }
+                //Check below
+                if (row < _rowCount - 3) {
+                    if (_tileList[s].tileContent == _tileList[s + (3 * _columnCount)].tileContent) {
+                        if (_tileList[s].tileContent == _tileList[s + _columnCount].tileContent || _tileList[s].tileContent == _tileList[s + (2 * _columnCount)].tileContent) {
+                            _tileList[s].Highlight(0.5f);
+                            _tileList[s + (3 * _columnCount)].Highlight(0.5f);
+                            _tileList[s + _columnCount].Highlight(0.5f);
+                            _tileList[s + (2 * _columnCount)].Highlight(0.5f);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        for (row = 0; row < _rowCount - 1; row++) {
+            for (c = 0; c < _columnCount - 1; c++) {
+            //check the diagonals
+            int t, b;
+            int l = -1;
+            int r = -1;
+            int bl = -1;
+            int br = -1;
+            int tl = -1;
+            int tr = -1;
+            s = c + (row * _columnCount);
+            t = s - _columnCount;
+            b = s + _columnCount;            
+            
+            if (s % _columnCount > 0) {
+                l = s - 1;
+                bl = b - 1;
+                tl = t - 1;
+            }
+            if ((s+1) % _columnCount > 0) {
+                r = s + 1;
+                br = b + 1;
+                tr = t + 1;
+            }
+            if (CompareTileContents(tl, tr) && _tileList[tl].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[tl].Highlight(0.5f);
+                _tileList[tr].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(tr, br) && _tileList[tr].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[br].Highlight(0.5f);
+                _tileList[tr].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(br, bl) && _tileList[br].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[br].Highlight(0.5f);
+                _tileList[bl].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(bl, tl) && _tileList[bl].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[bl].Highlight(0.5f);
+                _tileList[tl].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(b, tl) && _tileList[b].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[tl].Highlight(0.5f);
+                _tileList[b].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(b, tr) && _tileList[b].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[b].Highlight(0.5f);
+                _tileList[tr].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(t, bl) && _tileList[t].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[t].Highlight(0.5f);
+                _tileList[bl].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(t, br) && _tileList[t].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[t].Highlight(0.5f);
+                _tileList[br].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(r, tl) && _tileList[r].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[r].Highlight(0.5f);
+                _tileList[tl].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(r, bl) && _tileList[r].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[r].Highlight(0.5f);
+                _tileList[bl].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(l, tr) && _tileList[l].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[l].Highlight(0.5f);
+                _tileList[tr].Highlight(0.5f);
+                return true;
+            }
+            if (CompareTileContents(l, br) && _tileList[l].tileContent == _tileList[s].tileContent) {
+                _tileList[s].Highlight(0.5f);
+                _tileList[l].Highlight(0.5f);
+                _tileList[br].Highlight(0.5f);
+                return true;
+            }
+        }
+        }
+        return false;
+    }
+
+    private bool CompareTileContents(int index1,int index2) {
+        bool tilesAreTheSame = false;
+        if (index1 > -1 && index1 < _columnCount * _rowCount) {
+            if (index2 > -1 && index2 < _columnCount * _rowCount) {
+                if (_tileList[index1].tileContent == _tileList[index2].tileContent) {
+                    tilesAreTheSame = true;
+                }
+            }
+        }
+        return tilesAreTheSame;
     }
 }
