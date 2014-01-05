@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class Grid {
 
@@ -18,7 +19,7 @@ public class Grid {
 	private int _tileCounter = 0;
 	private int _rowCount;
 	private int _columnCount;
-	private Sprite[] _tileSprites;
+	private List<Sprite> _tileSprites;
 	private Tile[] _tileList;
 
 	private int _tile1;
@@ -30,7 +31,7 @@ public class Grid {
 
 	private int _mode;
 
-	public Grid(int rowCount,int columnCount,Sprite[] tileSprites){
+    public Grid(int rowCount, int columnCount, List<Sprite> tileSprites){
 		_rowCount = rowCount; 
 		_columnCount = columnCount; 
 		_tileSprites = tileSprites;
@@ -38,13 +39,14 @@ public class Grid {
         _currentMatches = new HashSet<int>();
 	}
 
-	public void CreateTiles(){ 
+	public void CreateTiles(){
+        GenerateGridWithoutMatches();/*
 		int totalTiles = _rowCount * _columnCount;		
 		_tileList = new Tile[totalTiles];
 		int i;
 		for(i = 0; i < totalTiles; i++){
-			CreateTile(_tileCounter++,0);
-		}
+            CreateTile(_tileCounter++, 0, _tileSprites.ToArray());
+		}*/
 	}
 
 	public int GetTileIndexAtXY(float x, float y){
@@ -147,9 +149,9 @@ public class Grid {
         _tileList[_tile2] = tempTile;
     }
 	
-	private void CreateTile(int index, int animationRowOffset){
-		int tileIndex = (int)Mathf.Round(Random.value * (_tileSprites.Length-1));
-		Tile tile = new Tile(index, _tileSprites[tileIndex],tileIndex);
+	private void CreateTile(int index, int animationRowOffset,int[] availableTiles){
+        int tileIndex = (int)Mathf.Round(Random.value * (availableTiles.Length - 1));
+        Tile tile = new Tile(index, _tileSprites[availableTiles[tileIndex]], availableTiles[tileIndex]);
 		float destinationX = CalculateTileX(index);
 		float destinationY = CalculateTileY(index);
 		Vector3 animateFrom = new Vector3(destinationX,destinationY,0);
@@ -225,10 +227,9 @@ public class Grid {
 				int tileIndex = (r*_columnCount) + c;
 				if(_tileList[tileIndex] == null){
 					int numberOfTilestoCreate = (int)Mathf.Ceil(((float)tileIndex+1)/_columnCount);
-					//Debug.Log(r+" "+c+" "+numberOfTilestoCreate+" "+tileIndex);
 					for(int t = 0; t < numberOfTilestoCreate; t++){
                         newIndex = tileIndex -(t*_columnCount);
-                        CreateTile(newIndex, numberOfTilestoCreate);
+                        CreateTile(newIndex, numberOfTilestoCreate, Enumerable.Range(0, _tileSprites.Count - 1).ToArray());
                         modifiedTiles.Add(newIndex);
 					}
 					break;
@@ -236,4 +237,29 @@ public class Grid {
 			}
 		}
 	}
+
+    private void GenerateGridWithoutMatches()
+    {
+        int totalTiles = _rowCount * _columnCount;
+        List<int> usableSprites;
+        _tileList = new Tile[totalTiles];
+        int i;
+        for (i = 0; i < totalTiles; i++)
+        {
+            int leftIndex = i - 2;
+            int topIndex = i - _columnCount;
+            usableSprites = Enumerable.Range(0, _tileSprites.Count - 1).ToList<int>();
+            if (leftIndex > -1)
+            {
+                usableSprites.Remove(_tileList[leftIndex].tileContent);
+            }
+            if (topIndex > -1)
+            {
+                usableSprites.Remove(_tileList[topIndex].tileContent);
+            }
+            //make sure that the tile is not the same as the tile 2 to the left and 2 above
+            CreateTile(_tileCounter++, 0, usableSprites.ToArray());
+        }
+
+    }
 }

@@ -1,9 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class LevelController : MonoBehaviour {
 
-	public Sprite[] tileSprites;
+    public List<Sprite> tileSprites;
 	public int rowCount;
 	public int columnCount;
 
@@ -19,7 +20,7 @@ public class LevelController : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		_levelGrid = new Grid(rowCount,columnCount,tileSprites);
+        _levelGrid = new Grid(rowCount, columnCount, tileSprites);
 		CreateLevel();
 	}
 	
