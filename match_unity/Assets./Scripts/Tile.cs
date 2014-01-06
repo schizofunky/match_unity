@@ -18,9 +18,13 @@ public class Tile {
 		tileContent = tileIndex;
 	}
 
-	~Tile(){
-		//Debug.Log("Tile was destroyed");
-	}
+    public void Destroy() {
+        UnityEngine.Object.Destroy(gameObject);
+    }
+
+    public Vector3 GetPosition() {
+        return gameObject.transform.position;
+    }
 
 	public void SetPosition(float x, float y){
 		gameObject.transform.position = new Vector3(x,y,1);

@@ -10,13 +10,14 @@ public class Grid {
 	private const float START_Y = 4.9f;
 	private const int TILE_MOVE_SPEED = 10;
 
-	private const int CHECK_TILES = 0;
-	private const int REVERSE_TILES = 1;
-	private const int REMOVE_MATCHES = 2;
-    private const int REFILL_GRID = 3;
-    private const int RECURSIVE_CHECK = 4;
+    private const int CREATING_GRID = 0;
+	private const int CHECK_TILES = 1;
+	private const int REVERSE_TILES = 2;
+	private const int REMOVE_MATCHES = 3;
+    private const int REFILL_GRID = 4;
+    private const int RECURSIVE_CHECK = 5;
+    private const int FLUSHING = 6;
 
-	private int _tileCounter = 0;
 	private int _rowCount;
 	private int _columnCount;
 	private List<Sprite> _tileSprites;
@@ -40,6 +41,7 @@ public class Grid {
 	}
 
 	public void CreateTiles(){
+        int tileCounter = 0;
         int totalTiles = _rowCount * _columnCount;
         List<int> usableSprites;
         _tileList = new Tile[totalTiles];
@@ -57,8 +59,9 @@ public class Grid {
             if (topIndex > -1){
                 usableSprites.Remove(_tileList[topIndex].tileContent);
             }
-            CreateTile(_tileCounter++, 0, usableSprites.ToArray());
+            CreateTile(tileCounter++, _rowCount, usableSprites.ToArray());
         }
+        _mode = CREATING_GRID;
 	}
 
 	public int GetTileIndexAtXY(float x, float y){
@@ -101,8 +104,11 @@ public class Grid {
 			allAnimationsCompleted = allAnimationsCompleted && animation.IsCompleted();
 		}
 		if(allAnimationsCompleted){
-
-			if(_mode == CHECK_TILES){
+            if (_mode == CREATING_GRID) {
+                _tileAnimations.Clear();
+                animationModeFinished = true;
+            }
+			else if(_mode == CHECK_TILES){
 				if(_tileList[_tile1].tileContent != _tileList[_tile2].tileContent){
                     List<int> tilesToCheck = new List<int>();
                     tilesToCheck.Add(_tile1);
@@ -116,15 +122,12 @@ public class Grid {
 			else if(_mode == REVERSE_TILES){
 				animationModeFinished = true;
 				_tileAnimations.Clear();
-                if (!DoMatchesExist()) {
-                    Debug.Log("NO MORE MATCHES EXIST!!!!");
-                }
 			}
 			else if(_mode == REMOVE_MATCHES){
 				_tileAnimations.Clear();
                 foreach (int index in _currentMatches)
                 {
-					_tileList[index].gameObject.SetActive(false);
+                    _tileList[index].Destroy();
 					_tileList[index] = null;
                 }
 				_recursiveTileList = RefillGrid();
@@ -141,11 +144,16 @@ public class Grid {
                 CheckForMatches(_recursiveTileList);   
                 if (_currentMatches.Count == 0)
                 {
-                    animationModeFinished = true;
                     if (!DoMatchesExist()) {
-                        Debug.Log("NO MORE MATCHES EXIST!!!!");
+                        FlushTiles();
+                    } else {
+                        animationModeFinished = true;
                     }
                 }
+            } else if (_mode == FLUSHING) {
+                RemoveAllTiles();
+                _tileAnimations.Clear();
+                CreateTiles();
             }
 		
 		}
@@ -256,7 +264,7 @@ public class Grid {
 		}
 	}
 
-    private bool DoMatchesExist() {
+    public bool DoMatchesExist() {
         foreach (Tile tile in _tileList) {
             tile.Highlight(1);
         }
@@ -402,5 +410,23 @@ public class Grid {
             }
         }
         return tilesAreTheSame;
+    }
+
+    private void FlushTiles() {
+        _mode = FLUSHING;
+        Vector3 tilePosition;
+        foreach (Tile tile in _tileList) {
+            tilePosition = tile.GetPosition();
+            _tileAnimations.Add(new TileAnimation(tile.gameObject, new Vector3(tilePosition.x, tilePosition.y - (_rowCount * SPACING), 0), TILE_MOVE_SPEED, TileAnimation.TRANSFORM));
+        }
+
+    }
+
+    private void RemoveAllTiles() {
+        int tileIndex;
+        for (tileIndex = 0; tileIndex < _tileList.Length; tileIndex++ ) {
+            _tileList[tileIndex].Destroy();
+            _tileList[tileIndex] = null;
+        }
     }
 }

@@ -14,7 +14,7 @@ public class LevelController : MonoBehaviour {
 	private Grid _levelGrid;
 	private Vector3 _lastMousePosition;
 
-	private int _mode;
+    private int _mode;
 
 	private int _startingTile = -1;
 
@@ -33,8 +33,10 @@ public class LevelController : MonoBehaviour {
 			case ANIMATING:
 				bool animationsCompleted = _levelGrid.AnimateTiles();
 				if(animationsCompleted){
-					_levelGrid.ToggleTileSelection(_startingTile);
-					_startingTile = -1;
+                    if (_startingTile > -1) { 
+					    _levelGrid.ToggleTileSelection(_startingTile);
+					    _startingTile = -1;
+                    }
 					_mode = INPUT;
 				}
 				break;
@@ -126,5 +128,6 @@ public class LevelController : MonoBehaviour {
 
 	private void CreateLevel(){
 		_levelGrid.CreateTiles();
+        _mode = ANIMATING;
 	}
 }
