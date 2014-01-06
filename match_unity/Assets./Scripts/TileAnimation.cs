@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
+using Assets.Scripts;
 
-public class TileAnimation {
+public class TileAnimation : ITileAnimation{
 
 	public const int TRANSFORM = 0;
 	public const int SCALE = 1;

@@ -7,16 +7,21 @@ public class Tile {
 
 	public GameObject gameObject {get; private set;}
 
+    private Sprite _sprite;
 	private bool _selected = false;
 
 
 	public Tile(int id, Sprite sprite, int tileIndex) {
-		gameObject = new GameObject();
-		gameObject.name = "Tile"+id;
-		gameObject.AddComponent("SpriteRenderer");
-		gameObject.GetComponent<SpriteRenderer>().sprite = sprite;
-		tileContent = tileIndex;
+        _sprite = sprite;
+        tileContent = tileIndex;
+        gameObject = new GameObject();
+        gameObject.name = "Tile" + id;
 	}
+
+    public void CreateSprite() {
+        gameObject.AddComponent("SpriteRenderer");
+        gameObject.GetComponent<SpriteRenderer>().sprite = _sprite;
+    }
 
     public void Destroy() {
         UnityEngine.Object.Destroy(gameObject);

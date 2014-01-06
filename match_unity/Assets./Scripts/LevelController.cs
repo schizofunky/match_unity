@@ -10,6 +10,7 @@ public class LevelController : MonoBehaviour {
 
 	private const int INPUT = 0;
 	private const int ANIMATING = 1;
+    private const int PROMPT_DELAY = 300;
 
 	private Grid _levelGrid;
 	private Vector3 _lastMousePosition;
@@ -17,6 +18,7 @@ public class LevelController : MonoBehaviour {
     private int _mode;
 
 	private int _startingTile = -1;
+    private int _waitCounter = 0;
 
 	// Use this for initialization
 	void Start () {
@@ -29,6 +31,9 @@ public class LevelController : MonoBehaviour {
 		switch(_mode){
 			case INPUT:
 				CheckForInput();
+                if (_waitCounter++ >= PROMPT_DELAY) {
+                    _levelGrid.AnimatePrompts();
+                }
 				break;
 			case ANIMATING:
 				bool animationsCompleted = _levelGrid.AnimateTiles();
@@ -37,6 +42,7 @@ public class LevelController : MonoBehaviour {
 					    _levelGrid.ToggleTileSelection(_startingTile);
 					    _startingTile = -1;
                     }
+                    _waitCounter = 0;
 					_mode = INPUT;
 				}
 				break;
@@ -124,7 +130,6 @@ public class LevelController : MonoBehaviour {
 	private bool IsInRange(float value,float range){
 		return value > -range && value < range;
 	}
-
 
 	private void CreateLevel(){
 		_levelGrid.CreateTiles();
