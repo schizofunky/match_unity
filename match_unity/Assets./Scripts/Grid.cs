@@ -267,7 +267,7 @@ public class Grid {
 					int numberOfTilestoCreate = (int)Mathf.Ceil(((float)tileIndex+1)/_columnCount);
 					for(int t = 0; t < numberOfTilestoCreate; t++){
                         newIndex = tileIndex -(t*_columnCount);
-                        CreateTile(newIndex, numberOfTilestoCreate, Enumerable.Range(0, _tileSprites.Count).ToArray());
+                        CreateTile(newIndex, numberOfTilestoCreate, GetUsableSprites(newIndex));
                         _tileList[newIndex].CreateSprite();
                         modifiedTiles.Add(newIndex);
 					}
@@ -276,6 +276,24 @@ public class Grid {
 			}
 		}
 	}
+
+    private int[] GetUsableSprites(int startIndex) {
+        List<int> usableSprites = Enumerable.Range(0, _tileSprites.Count).ToList();
+        int leftIndex = startIndex - 1;
+        int rightIndex = startIndex + 1;
+        int belowIndex = startIndex + _columnCount;
+        int totalTiles = _rowCount * _columnCount;
+        if (leftIndex > -1) {
+            usableSprites.Remove(_tileList[leftIndex].tileContent);
+        }
+        if (rightIndex < totalTiles && _tileList[rightIndex] != null) {
+            usableSprites.Remove(_tileList[rightIndex].tileContent);
+        }
+        if (belowIndex < totalTiles) {
+            usableSprites.Remove(_tileList[belowIndex].tileContent);
+        }
+        return usableSprites.ToArray();
+    }
 
     public bool DoMatchesExist() {
         int c,row,s;
