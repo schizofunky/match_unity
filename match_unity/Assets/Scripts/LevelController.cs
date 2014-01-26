@@ -8,46 +8,22 @@ public class LevelController : MonoBehaviour {
 	public int rowCount;
 	public int columnCount;
 
-	private const int INPUT = 0;
-	private const int ANIMATING = 1;
-    private const int PROMPT_DELAY = 300;
-
 	private Grid _levelGrid;
 	private Vector3 _lastMousePosition;
 
-    private int _mode;
-
 	private int _startingTile = -1;
-    private int _waitCounter = 0;
 
 	// Use this for initialization
 	void Start () {
         _levelGrid = new Grid(rowCount, columnCount, tileSprites);
-		CreateLevel();
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		switch(_mode){
-			case INPUT:
-				CheckForInput();
-                if (_waitCounter++ >= PROMPT_DELAY) {
-                    _levelGrid.AnimatePrompts();
-                }
-				break;
-			case ANIMATING:
-				bool animationsCompleted = _levelGrid.AnimateTiles();
-				if(animationsCompleted){
-                    if (_startingTile > -1) { 
-					    _levelGrid.ToggleTileSelection(_startingTile);
-					    _startingTile = -1;
-                    }
-                    _waitCounter = 0;
-					_mode = INPUT;
-				}
-				break;
-		}
-
+		_levelGrid.Update();
+		if(_levelGrid.currentState.Equals(Grid.GridState.IDLE)){
+			CheckForInput();
+		}	
 	}
 
 	private void CheckForInput(){
@@ -59,7 +35,7 @@ public class LevelController : MonoBehaviour {
 			}
 			else{
 				_startingTile = selectedTile;
-				_levelGrid.ToggleTileSelection(selectedTile);
+				_levelGrid.HighlightTile(selectedTile);
 			}
 		}
 		else if(_startingTile != -1){
@@ -68,7 +44,7 @@ public class LevelController : MonoBehaviour {
 				int endingTile = _startingTile+tileToSwap;
 				if(CheckTileMovementIsValid(_startingTile,endingTile)){
 					_levelGrid.SwapTiles(_startingTile,_startingTile+tileToSwap);
-					_mode = ANIMATING;
+					_startingTile = -1;
 				}
 			}
 		}
@@ -129,10 +105,5 @@ public class LevelController : MonoBehaviour {
 
 	private bool IsInRange(float value,float range){
 		return value > -range && value < range;
-	}
-
-	private void CreateLevel(){
-		_levelGrid.CreateTiles();
-        _mode = ANIMATING;
 	}
 }

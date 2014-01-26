@@ -48,9 +48,8 @@ public class Tile {
 		return hit;
 	}
 
-	public void ToggleSelected(){
-		_selected = !_selected;
-		if(_selected){			
+	public void SetSelected(bool selected){
+		if(selected){			
 			gameObject.transform.localScale = new Vector3(2.2f,2.2f,1);
 		}else{
 			gameObject.transform.localScale = new Vector3(2,2,1);

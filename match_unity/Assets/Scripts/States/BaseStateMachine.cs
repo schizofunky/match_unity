@@ -3,7 +3,7 @@ using System.Collections;
 using System;
 
 
-public class BaseStateMachine : MonoBehaviour {
+public class BaseStateMachine /*: MonoBehaviour*/ {
 
     public Action OnStateUpdate;
     public Action OnStateEnter;
@@ -22,10 +22,6 @@ public class BaseStateMachine : MonoBehaviour {
             ConfigureCurrentState();
         }
     }
-    public enum TestStates {
-        firstState= 0,
-        secondState = 1
-    }
 
     private int _countdownTimer = 0;
 
@@ -34,12 +30,11 @@ public class BaseStateMachine : MonoBehaviour {
     }
 
 	// Use this for initialization
-	void Start () {
-        currentState = TestStates.firstState;
-	}
+	/*public void Start () {
+	}*/
 	
 	// Update is called once per frame
-	void Update () {
+	public void UpdateStates () {
         if (OnStateUpdate != null) {
             OnStateUpdate();
         }
@@ -76,37 +71,6 @@ public class BaseStateMachine : MonoBehaviour {
         }
 
     }
-
-    #region firstState
-
-    public void firstState_EnterState() {
-        _countdownTimer = 200;
-    }
-
-    public void firstState_Update() {
-        Debug.Log("Ok so the first states update is being called");
-        _countdownTimer--;
-        if (_countdownTimer <= 0) {
-            currentState = TestStates.secondState;
-        }
-    }
-
-
-    public void firstState_ExitState() {
-        Debug.Log("So long and thanks for all the fish!");
-    }
-    #endregion
-
-    #region secondState
-    public void secondState_EnterState() {
-
-        Debug.Log("Oh myyyy round 2 begins!");
-    }
-
-    public void secondState_Update() {
-        Debug.Log("Never ending storrrrryyyyy!");
-    }
-    #endregion
 
 
 }
