@@ -13,13 +13,15 @@ public class Grid {
     private const int TILE_MOVE_SPEED = 10;
     private const int PROMPT_SPEED = 30;
 
-    private const int CREATING_GRID = 0;
-	private const int CHECK_TILES = 1;
-	private const int REVERSE_TILES = 2;
-	private const int REMOVE_MATCHES = 3;
-    private const int REFILL_GRID = 4;
-    private const int RECURSIVE_CHECK = 5;
-    private const int FLUSHING = 6;
+    public enum GridState{
+        CREATING_GRID = 0,
+        CHECK_TILES = 1,    
+        REVERSE_TILES = 2,    
+        REMOVE_MATCHES = 3,    
+        REFILL_GRID = 4,    
+        RECURSIVE_CHECK = 5,  
+        FLUSHING = 6  
+    } 
 
 	private int _rowCount;
 	private int _columnCount;
@@ -34,7 +36,7 @@ public class Grid {
     private List<int> _recursiveTileList;
     private ScaleAnimation[] _matchPrompt = new ScaleAnimation[3];
 
-	private int _mode;
+	private GridState _mode;
 
     public Grid(int rowCount, int columnCount, List<Sprite> tileSprites){
 		_rowCount = rowCount; 
@@ -65,7 +67,7 @@ public class Grid {
             }
             CreateTile(tileCounter++, _rowCount, usableSprites.ToArray());
         }
-        _mode = CREATING_GRID;
+        _mode = GridState.CREATING_GRID;
         if (!DoMatchesExist()) {
             CreateTiles();
         } else {
@@ -104,7 +106,7 @@ public class Grid {
 		Tile tempTile = _tileList[tile1Index];
 		_tileList[tile1Index] = _tileList[tile2Index];
 		_tileList[tile2Index] = tempTile;
-		_mode = CHECK_TILES;
+		_mode = GridState.CHECK_TILES;
 	}
 
 	public bool AnimateTiles(){
@@ -115,11 +117,11 @@ public class Grid {
 			allAnimationsCompleted = allAnimationsCompleted && animation.IsCompleted();
 		}
 		if(allAnimationsCompleted){
-            if (_mode == CREATING_GRID) {
+            if (_mode == GridState.CREATING_GRID) {
                 _tileAnimations.Clear();
                 animationModeFinished = true;
             }
-			else if(_mode == CHECK_TILES){
+			else if(_mode == GridState.CHECK_TILES){
 				if(_tileList[_tile1].tileContent != _tileList[_tile2].tileContent){
                     List<int> tilesToCheck = new List<int>();
                     tilesToCheck.Add(_tile1);
@@ -130,11 +132,11 @@ public class Grid {
                     ReverseTiles();
 				}
 			}
-			else if(_mode == REVERSE_TILES){
+			else if(_mode == GridState.REVERSE_TILES){
 				animationModeFinished = true;
 				_tileAnimations.Clear();
 			}
-			else if(_mode == REMOVE_MATCHES){
+			else if(_mode == GridState.REMOVE_MATCHES){
 				_tileAnimations.Clear();
                 foreach (int index in _currentMatches)
                 {
@@ -142,13 +144,13 @@ public class Grid {
 					_tileList[index] = null;
                 }
 				_recursiveTileList = RefillGrid();
-				_mode = REFILL_GRID; 
+				_mode = GridState.REFILL_GRID; 
 			}
-			else if(_mode == REFILL_GRID){				
+			else if(_mode == GridState.REFILL_GRID){				
 				_tileAnimations.Clear();
-                _mode = RECURSIVE_CHECK;
+                _mode = GridState.RECURSIVE_CHECK;
 			}
-            else if (_mode == RECURSIVE_CHECK)
+            else if (_mode == GridState.RECURSIVE_CHECK)
             {
                 _currentMatches.Clear();
                 _tileAnimations.Clear();
@@ -161,7 +163,7 @@ public class Grid {
                         animationModeFinished = true;
                     }
                 }
-            } else if (_mode == FLUSHING) {
+            } else if (_mode == GridState.FLUSHING) {
                 RemoveAllTiles();
                 _tileAnimations.Clear();
                 CreateTiles();
@@ -173,7 +175,7 @@ public class Grid {
 
     private void ReverseTiles()
     {
-        _mode = REVERSE_TILES;
+        _mode = GridState.REVERSE_TILES;
         //reverse the animations
         foreach (TileAnimation animation in _tileAnimations)
         {
@@ -216,7 +218,7 @@ public class Grid {
             RemovePrompt();
             _tileAnimations.Clear();
             RemoveMatchedTiles(_currentMatches);
-            _mode = REMOVE_MATCHES;
+            _mode = GridState.REMOVE_MATCHES;
             //matches found
         }
 	}
@@ -419,7 +421,7 @@ public class Grid {
     }
 
     private void FlushTiles() {
-        _mode = FLUSHING;
+        _mode = GridState.FLUSHING;
         Vector3 tilePosition;
         foreach (Tile tile in _tileList) {
             tilePosition = tile.GetPosition();
