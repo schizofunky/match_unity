@@ -8,10 +8,7 @@ using Assets.Scripts.Animations;
 public class Grid {
 
 	private const float SPACING = 0.9f;
-	private const float START_X = -3;
-	private const float START_Y = 4.9f;
     private const int TILE_MOVE_SPEED = 10;
-    private const int PROMPT_SPEED = 30;
 
     public enum GridState{
         CREATING_GRID = 0,
@@ -34,9 +31,11 @@ public class Grid {
 	private List<ITileAnimation> _tileAnimations;
     private HashSet<int> _currentMatches;
     private List<int> _recursiveTileList;
-    private ScaleAnimation[] _matchPrompt = new ScaleAnimation[3];
+	private MatchPrompter _prompter;
 
 	private GridState _mode;
+	private TileCreator _tileCreator;
+	private MatchChecker _matchChecker;
 
     public Grid(int rowCount, int columnCount, List<Sprite> tileSprites){
 		_rowCount = rowCount; 
@@ -54,6 +53,8 @@ public class Grid {
         int i;
         int leftIndex;
         int topIndex;
+		_tileCreator =  new TileCreator(_tileSprites,_tileList,_rowCount,_columnCount);
+		_matchChecker = new MatchChecker(_tileList,_columnCount,_rowCount);
         for (i = 0; i < totalTiles; i++){
             leftIndex = i - 2;
             topIndex = i - _columnCount;
@@ -65,16 +66,23 @@ public class Grid {
             if (topIndex > -1){
                 usableSprites.Remove(_tileList[topIndex].tileContent);
             }
-            CreateTile(tileCounter++, _rowCount, usableSprites.ToArray());
+			TileAnimation animation = _tileCreator.CreateTile(tileCounter++, _rowCount, usableSprites.ToArray());
+			if(animation != null){
+				_tileAnimations.Add(animation);
+			}
         }
+		_prompter = new MatchPrompter(_tileList);
         _mode = GridState.CREATING_GRID;
-        if (!DoMatchesExist()) {
-            CreateTiles();
-        } else {
-            for (i = 0; i < totalTiles; i++) {
-                _tileList[i].CreateSprite();
-            }
-        }
+		Vector3 possibleMatches = _matchChecker.GetPossibleMatch();
+		if(possibleMatches == Vector3.zero){
+			CreateTiles();
+		}
+		else{
+			_prompter.SetMatchPrompt(possibleMatches);
+			for (i = 0; i < totalTiles; i++) {
+				_tileList[i].CreateSprite();
+			}
+		}
 	}
 
 	public int GetTileIndexAtXY(float x, float y){
@@ -107,6 +115,10 @@ public class Grid {
 		_tileList[tile1Index] = _tileList[tile2Index];
 		_tileList[tile2Index] = tempTile;
 		_mode = GridState.CHECK_TILES;
+	}
+	
+	public void AnimatePrompts() {
+		_prompter.AnimatePrompts();
 	}
 
 	public bool AnimateTiles(){
@@ -143,7 +155,7 @@ public class Grid {
                     _tileList[index].Destroy();
 					_tileList[index] = null;
                 }
-				_recursiveTileList = RefillGrid();
+				_recursiveTileList = _tileCreator.RefillGrid(_tileAnimations);
 				_mode = GridState.REFILL_GRID; 
 			}
 			else if(_mode == GridState.REFILL_GRID){				
@@ -157,11 +169,14 @@ public class Grid {
                 CheckForMatches(_recursiveTileList);   
                 if (_currentMatches.Count == 0)
                 {
-                    if (!DoMatchesExist()) {
-                        FlushTiles();
-                    } else {
-                        animationModeFinished = true;
-                    }
+					Vector3 possibleMatches = _matchChecker.GetPossibleMatch();
+					if(possibleMatches == Vector3.zero){
+						FlushTiles();
+					}
+					else{
+						_prompter.SetMatchPrompt(possibleMatches);
+						animationModeFinished = true;
+					}
                 }
             } else if (_mode == GridState.FLUSHING) {
                 RemoveAllTiles();
@@ -172,6 +187,14 @@ public class Grid {
 		}
 		return animationModeFinished;
 	}
+
+
+
+
+
+
+
+
 
     private void ReverseTiles()
     {
@@ -187,35 +210,12 @@ public class Grid {
         _tileList[_tile1] = _tileList[_tile2];
         _tileList[_tile2] = tempTile;
     }
-	
-	private void CreateTile(int index, int animationRowOffset,int[] availableTiles){
-        int tileIndex = (int)Mathf.Round(Random.value * (availableTiles.Length - 1));
-        Tile tile = new Tile(index, _tileSprites[availableTiles[tileIndex]], availableTiles[tileIndex]);
-		float destinationX = CalculateTileX(index);
-		float destinationY = CalculateTileY(index);
-		Vector3 animateFrom = new Vector3(destinationX,destinationY,0);
-		tile.SetPosition(destinationX,destinationY+(animationRowOffset*SPACING));
-		_tileList[index] = tile;
-        if (animationRowOffset != 0){
-            _tileAnimations.Add(new TileAnimation(_tileList[index].gameObject, animateFrom, TILE_MOVE_SPEED, TileAnimation.TRANSFORM));
-        }
-	}
-	
-	private float CalculateTileX(int index){
-		return START_X + (SPACING * (index % _rowCount));
-	}
-	
-	private float CalculateTileY(int index){		
-		return START_Y - (SPACING * Mathf.Floor(index / _columnCount));
-	}
-
     private void CheckForMatches(List<int> tilesToCheck)
     {
-		MatchChecker matchChecker = new MatchChecker();
-        _currentMatches = matchChecker.CheckForMatches(_tileList, tilesToCheck, _columnCount);
+		_currentMatches = _matchChecker.CheckForMatches(tilesToCheck);
         if (_currentMatches.Count > 0)
         {
-            RemovePrompt();
+			_prompter.RemovePrompt();
             _tileAnimations.Clear();
             RemoveMatchedTiles(_currentMatches);
             _mode = GridState.REMOVE_MATCHES;
@@ -228,197 +228,6 @@ public class Grid {
             _tileAnimations.Add(new ScaleAnimation(_tileList[index].gameObject, 0, TILE_MOVE_SPEED, false));
 		}
 	}
-
-    private List<int> RefillGrid()
-    {
-		int tileListIndex;
-        List<int> modifiedTiles = new List<int>();
-		for(tileListIndex = _tileList.Length-1; tileListIndex >= 0; tileListIndex--){
-			if(_tileList[tileListIndex] == null){
-				int tile = FindTileAbove(tileListIndex);
-				if(tile != -1){
-					_tileList[tileListIndex] = _tileList[tile];
-					_tileList[tile] = null;
-                    modifiedTiles.Add(tileListIndex);
-					_tileAnimations.Add(new TileAnimation(_tileList[tileListIndex].gameObject, new Vector3(CalculateTileX(tileListIndex),CalculateTileY(tileListIndex),0),TILE_MOVE_SPEED,TileAnimation.TRANSFORM));
-				}
-			}
-		}
-        GenerateNewTiles(modifiedTiles);
-        return modifiedTiles;
-	}
-
-	private int FindTileAbove(int startIndex){
-		int line = -1;
-		for(int index = startIndex - _columnCount; index >= 0; index-=_columnCount){	
-			if(_tileList[index] != null){
-				line = index;
-				break;
-			}
-		}
-		return line;
-	}
-
-    private void GenerateNewTiles(List<int> modifiedTiles)
-    {
-        int newIndex;
-		for(int c = 0; c < _columnCount; c++){
-			for(int r = _rowCount-1; r >= 0; r--){
-				int tileIndex = (r*_columnCount) + c;
-				if(_tileList[tileIndex] == null){
-					int numberOfTilestoCreate = (int)Mathf.Ceil(((float)tileIndex+1)/_columnCount);
-					for(int t = 0; t < numberOfTilestoCreate; t++){
-                        newIndex = tileIndex -(t*_columnCount);
-                        CreateTile(newIndex, numberOfTilestoCreate, GetUsableSprites(newIndex));
-                        _tileList[newIndex].CreateSprite();
-                        modifiedTiles.Add(newIndex);
-					}
-					break;
-				}
-			}
-		}
-	}
-
-    private int[] GetUsableSprites(int startIndex) {
-        List<int> usableSprites = Enumerable.Range(0, _tileSprites.Count).ToList();
-        int leftIndex = startIndex - 1;
-        int rightIndex = startIndex + 1;
-        int belowIndex = startIndex + _columnCount;
-        int totalTiles = _rowCount * _columnCount;
-        if (leftIndex > -1) {
-            usableSprites.Remove(_tileList[leftIndex].tileContent);
-        }
-        if (rightIndex < totalTiles && _tileList[rightIndex] != null) {
-            usableSprites.Remove(_tileList[rightIndex].tileContent);
-        }
-        if (belowIndex < totalTiles) {
-            usableSprites.Remove(_tileList[belowIndex].tileContent);
-        }
-        return usableSprites.ToArray();
-    }
-
-    public bool DoMatchesExist() {
-        int c,row,s;
-        for (row = 0; row < _rowCount; row++) {
-            for (c = 0; c < _columnCount; c++) {
-                s = c + (row * _columnCount);
-                //Check to the right, start with 3 along then check the middle 2 
-                if (c < _columnCount - 3) {
-                    if (_tileList[s].tileContent == _tileList[s + 3].tileContent) {
-
-                        if (_tileList[s].tileContent == _tileList[s + 1].tileContent) {
-                            SetMatchPrompt(s, s+1, s+3);
-                            return true;
-                        }
-                        if(_tileList[s].tileContent == _tileList[s + 2].tileContent) {
-                            SetMatchPrompt(s, s + 2, s + 3);
-                            return true;
-                        }
-                    }
-                }
-                //Check below
-                if (row < _rowCount - 3) {
-                    if (_tileList[s].tileContent == _tileList[s + (3 * _columnCount)].tileContent) {
-                        if (_tileList[s].tileContent == _tileList[s + _columnCount].tileContent ){
-                            SetMatchPrompt(s, s + _columnCount, s + (3 * _columnCount));
-                            return true;
-                        }
-                        if( _tileList[s].tileContent == _tileList[s + (2 * _columnCount)].tileContent) {
-                            SetMatchPrompt(s, s + (2 * _columnCount), s + (3 * _columnCount));
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        for (row = 0; row < _rowCount - 1; row++) {
-            for (c = 0; c < _columnCount - 1; c++) {
-            //check the diagonals
-            int t, b;
-            int l = -1;
-            int r = -1;
-            int bl = -1;
-            int br = -1;
-            int tl = -1;
-            int tr = -1;
-            s = c + (row * _columnCount);
-            t = s - _columnCount;
-            b = s + _columnCount;            
-            
-            if (s % _columnCount > 0) {
-                l = s - 1;
-                bl = b - 1;
-                tl = t - 1;
-            }
-            if ((s+1) % _columnCount > 0) {
-                r = s + 1;
-                br = b + 1;
-                tr = t + 1;
-            }
-            if (CompareTileContents(tl, tr) && _tileList[tl].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, tl, tr);
-                return true;
-            }
-            if (CompareTileContents(tr, br) && _tileList[tr].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, br, tr);
-                return true;
-            }
-            if (CompareTileContents(br, bl) && _tileList[br].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, br, bl);
-                return true;
-            }
-            if (CompareTileContents(bl, tl) && _tileList[bl].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, bl, tl);
-                return true;
-            }
-            if (CompareTileContents(b, tl) && _tileList[b].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, b, tl);
-                return true;
-            }
-            if (CompareTileContents(b, tr) && _tileList[b].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, b, tr);
-                return true;
-            }
-            if (CompareTileContents(t, bl) && _tileList[t].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, t, bl);
-                return true;
-            }
-            if (CompareTileContents(t, br) && _tileList[t].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, t, br);
-                return true;
-            }
-            if (CompareTileContents(r, tl) && _tileList[r].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, r, tl);
-                return true;
-            }
-            if (CompareTileContents(r, bl) && _tileList[r].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, r, bl);
-                return true;
-            }
-            if (CompareTileContents(l, tr) && _tileList[l].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, l, tr);
-                return true;
-            }
-            if (CompareTileContents(l, br) && _tileList[l].tileContent == _tileList[s].tileContent) {
-                SetMatchPrompt(s, l, br);
-                return true;
-            }
-        }
-        }
-        return false;
-    }
-
-    private bool CompareTileContents(int index1,int index2) {
-        bool tilesAreTheSame = false;
-        if (index1 > -1 && index1 < _columnCount * _rowCount) {
-            if (index2 > -1 && index2 < _columnCount * _rowCount) {
-                if (_tileList[index1].tileContent == _tileList[index2].tileContent) {
-                    tilesAreTheSame = true;
-                }
-            }
-        }
-        return tilesAreTheSame;
-    }
 
     private void FlushTiles() {
         _mode = GridState.FLUSHING;
@@ -436,28 +245,5 @@ public class Grid {
             _tileList[tileIndex].Destroy();
             _tileList[tileIndex] = null;
         }
-    }
-
-    private void SetMatchPrompt(int index1, int index2, int index3) {
-        _matchPrompt[0] = new ScaleAnimation(_tileList[index1].gameObject, 2.5f, PROMPT_SPEED, true);
-        _matchPrompt[1] = new ScaleAnimation(_tileList[index2].gameObject, 2.5f, PROMPT_SPEED, true);
-        _matchPrompt[2] = new ScaleAnimation(_tileList[index3].gameObject, 2.5f, PROMPT_SPEED, true);
-    }
-
-    private void RemovePrompt() {
-        if (_matchPrompt[0] != null) {
-            _matchPrompt[0].Reset();
-            _matchPrompt[1].Reset();
-            _matchPrompt[2].Reset();
-            _matchPrompt[0] = null;
-            _matchPrompt[1] = null;
-            _matchPrompt[2] = null;
-        }
-    }
-
-    public void AnimatePrompts() {
-        _matchPrompt[0].UpdateAnimation();
-        _matchPrompt[1].UpdateAnimation();
-        _matchPrompt[2].UpdateAnimation();
     }
 }
