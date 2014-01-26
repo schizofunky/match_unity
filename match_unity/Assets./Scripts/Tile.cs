@@ -8,7 +8,6 @@ public class Tile {
 	public GameObject gameObject {get; private set;}
 
     private Sprite _sprite;
-	private bool _selected = false;
 
 
 	public Tile(int id, Sprite sprite, int tileIndex) {

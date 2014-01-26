@@ -2,8 +2,7 @@
 using System.Collections;
 using System;
 
-
-public class BaseStateMachine /*: MonoBehaviour*/ {
+public class BaseStateMachine {
 
     public Action OnStateUpdate;
     public Action OnStateEnter;
@@ -23,16 +22,9 @@ public class BaseStateMachine /*: MonoBehaviour*/ {
         }
     }
 
-    private int _countdownTimer = 0;
-
     static void DoNothing() {
 
     }
-
-	// Use this for initialization
-	/*public void Start () {
-	}*/
-	
 	// Update is called once per frame
 	public void UpdateStates () {
         if (OnStateUpdate != null) {

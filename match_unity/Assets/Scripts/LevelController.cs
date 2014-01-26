@@ -12,10 +12,12 @@ public class LevelController : MonoBehaviour {
 	private Vector3 _lastMousePosition;
 
 	private int _startingTile = -1;
+	private GridInfo _gridInfo;
 
 	// Use this for initialization
 	void Start () {
-        _levelGrid = new Grid(rowCount, columnCount, tileSprites);
+		_gridInfo = new GridInfo(rowCount, columnCount, tileSprites);
+		_levelGrid = new Grid(_gridInfo);
 	}
 	
 	// Update is called once per frame
@@ -29,14 +31,7 @@ public class LevelController : MonoBehaviour {
 	private void CheckForInput(){
 		if(Input.GetMouseButtonDown(0)){
 			_lastMousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-			int selectedTile =  _levelGrid.GetTileIndexAtXY(_lastMousePosition.x,_lastMousePosition.y);
-			if(selectedTile == -1){
-				_startingTile = -1;
-			}
-			else{
-				_startingTile = selectedTile;
-				_levelGrid.HighlightTile(selectedTile);
-			}
+			_startingTile = _levelGrid.SelectTileIndexAtXY(_lastMousePosition.x,_lastMousePosition.y);
 		}
 		else if(_startingTile != -1){
 			int tileToSwap = CalculateMouseDirection();
@@ -47,8 +42,7 @@ public class LevelController : MonoBehaviour {
 					_startingTile = -1;
 				}
 			}
-		}
-	
+		}	
 	}
 
 	private bool CheckTileMovementIsValid(int start, int end){
@@ -70,7 +64,6 @@ public class LevelController : MonoBehaviour {
 	 */
 
 	private int CalculateMouseDirection(){
-		//TODO: Need to ensure that a tile exists e.g. no < 0 or > length or > rowcount > columncount 
 		Vector3 startPosition = _lastMousePosition;
 		Vector3 endPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 		Vector3 difference =  endPosition - startPosition;

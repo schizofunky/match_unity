@@ -5,19 +5,15 @@ using System.Collections.Generic;
 public class MatchChecker{
 
 	private int _originalTileContent;
-	private Tile[] _tileList;
-	private int _columnCount;	
-	private int _rowCount;
+	private GridInfo _gridInfo;
 	private int _lastColumnId;
 	private int _mapSize;
 	private HashSet<int> _tilesMatched;
 
-	public MatchChecker(Tile[] tileList,int columnCount, int rowCount){
-		_tileList = tileList;
-		_columnCount = columnCount;
-		_rowCount = rowCount;
-		_lastColumnId = columnCount-1;
-		_mapSize = tileList.Length-1;
+	public MatchChecker(GridInfo gridInfo){
+		_gridInfo = gridInfo;
+		_lastColumnId = _gridInfo.columnCount-1;
+		_mapSize = _gridInfo.totalTiles-1;
 	}
 
 	public HashSet<int> CheckForMatches(List<int> changedTiles){
@@ -31,40 +27,40 @@ public class MatchChecker{
 	public Vector3 GetPossibleMatch() {
 		Vector3 possibleMatches;
 		int c,row,s;
-		for (row = 0; row < _rowCount; row++) {
-			for (c = 0; c < _columnCount; c++) {
-				s = c + (row * _columnCount);
+		for (row = 0; row < _gridInfo.rowCount; row++) {
+			for (c = 0; c < _gridInfo.columnCount; c++) {
+				s = c + (row * _gridInfo.columnCount);
 				//Check to the right, start with 3 along then check the middle 2 
-				if (c < _columnCount - 3) {
-					if (_tileList[s].tileContent == _tileList[s + 3].tileContent) {
+				if (c < _gridInfo.columnCount - 3) {
+					if (_gridInfo.tileList[s].tileContent == _gridInfo.tileList[s + 3].tileContent) {
 						
-						if (_tileList[s].tileContent == _tileList[s + 1].tileContent) {
+						if (_gridInfo.tileList[s].tileContent == _gridInfo.tileList[s + 1].tileContent) {
 							possibleMatches = new Vector3(s, s+1, s+3);
 							return possibleMatches;
 						}
-						if(_tileList[s].tileContent == _tileList[s + 2].tileContent) {
+						if(_gridInfo.tileList[s].tileContent == _gridInfo.tileList[s + 2].tileContent) {
 							possibleMatches = new Vector3(s, s + 2, s + 3);
 							return possibleMatches;
 						}
 					}
 				}
 				//Check below
-				if (row < _rowCount - 3) {
-					if (_tileList[s].tileContent == _tileList[s + (3 * _columnCount)].tileContent) {
-						if (_tileList[s].tileContent == _tileList[s + _columnCount].tileContent ){
-							possibleMatches = new Vector3(s, s + _columnCount, s + (3 * _columnCount));
+				if (row < _gridInfo.rowCount - 3) {
+					if (_gridInfo.tileList[s].tileContent == _gridInfo.tileList[s + (3 * _gridInfo.columnCount)].tileContent) {
+						if (_gridInfo.tileList[s].tileContent == _gridInfo.tileList[s + _gridInfo.columnCount].tileContent ){
+							possibleMatches = new Vector3(s, s + _gridInfo.columnCount, s + (3 * _gridInfo.columnCount));
 							return possibleMatches;
 						}
-						if( _tileList[s].tileContent == _tileList[s + (2 * _columnCount)].tileContent) {
-							possibleMatches = new Vector3(s, s + (2 * _columnCount), s + (3 * _columnCount));
+						if( _gridInfo.tileList[s].tileContent == _gridInfo.tileList[s + (2 * _gridInfo.columnCount)].tileContent) {
+							possibleMatches = new Vector3(s, s + (2 * _gridInfo.columnCount), s + (3 * _gridInfo.columnCount));
 							return possibleMatches;
 						}
 					}
 				}
 			}
 		}
-		for (row = 0; row < _rowCount - 1; row++) {
-			for (c = 0; c < _columnCount - 1; c++) {
+		for (row = 0; row < _gridInfo.rowCount - 1; row++) {
+			for (c = 0; c < _gridInfo.columnCount - 1; c++) {
 				//check the diagonals
 				int t, b;
 				int l = -1;
@@ -73,65 +69,65 @@ public class MatchChecker{
 				int br = -1;
 				int tl = -1;
 				int tr = -1;
-				s = c + (row * _columnCount);
-				t = s - _columnCount;
-				b = s + _columnCount;            
+				s = c + (row * _gridInfo.columnCount);
+				t = s - _gridInfo.columnCount;
+				b = s + _gridInfo.columnCount;            
 				
-				if (s % _columnCount > 0) {
+				if (s % _gridInfo.columnCount > 0) {
 					l = s - 1;
 					bl = b - 1;
 					tl = t - 1;
 				}
-				if ((s+1) % _columnCount > 0) {
+				if ((s+1) % _gridInfo.columnCount > 0) {
 					r = s + 1;
 					br = b + 1;
 					tr = t + 1;
 				}
-				if (CompareTileContents(tl, tr) && _tileList[tl].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(tl, tr) && _gridInfo.tileList[tl].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, tl, tr);
 					return possibleMatches;
 				}
-				if (CompareTileContents(tr, br) && _tileList[tr].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(tr, br) && _gridInfo.tileList[tr].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, br, tr);
 					return possibleMatches;
 				}
-				if (CompareTileContents(br, bl) && _tileList[br].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(br, bl) && _gridInfo.tileList[br].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, br, bl);
 					return possibleMatches;
 				}
-				if (CompareTileContents(bl, tl) && _tileList[bl].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(bl, tl) && _gridInfo.tileList[bl].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, bl, tl);
 					return possibleMatches;
 				}
-				if (CompareTileContents(b, tl) && _tileList[b].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(b, tl) && _gridInfo.tileList[b].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, b, tl);
 					return possibleMatches;
 				}
-				if (CompareTileContents(b, tr) && _tileList[b].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(b, tr) && _gridInfo.tileList[b].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, b, tr);
 					return possibleMatches;
 				}
-				if (CompareTileContents(t, bl) && _tileList[t].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(t, bl) && _gridInfo.tileList[t].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, t, bl);
 					return possibleMatches;
 				}
-				if (CompareTileContents(t, br) && _tileList[t].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(t, br) && _gridInfo.tileList[t].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, t, br);
 					return possibleMatches;
 				}
-				if (CompareTileContents(r, tl) && _tileList[r].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(r, tl) && _gridInfo.tileList[r].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, r, tl);
 					return possibleMatches;
 				}
-				if (CompareTileContents(r, bl) && _tileList[r].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(r, bl) && _gridInfo.tileList[r].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, r, bl);
 					return possibleMatches;
 				}
-				if (CompareTileContents(l, tr) && _tileList[l].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(l, tr) && _gridInfo.tileList[l].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, l, tr);
 					return possibleMatches;
 				}
-				if (CompareTileContents(l, br) && _tileList[l].tileContent == _tileList[s].tileContent) {
+				if (CompareTileContents(l, br) && _gridInfo.tileList[l].tileContent == _gridInfo.tileList[s].tileContent) {
 					possibleMatches = new Vector3(s, l, br);
 					return possibleMatches;
 					//return true;
@@ -142,9 +138,9 @@ public class MatchChecker{
 	}
 
 	private void CheckTileForMatches(int index){
-		_originalTileContent = _tileList[index].tileContent;
+		_originalTileContent = _gridInfo.tileList[index].tileContent;
 		//Checks all 4 directions around the current tile for matches
-		AddMatchesToBeRemovedToList(index,CheckDirection(index,-1),CheckDirection(index,1),CheckDirection(index,-_columnCount),CheckDirection(index,_columnCount));		
+		AddMatchesToBeRemovedToList(index,CheckDirection(index,-1),CheckDirection(index,1),CheckDirection(index,-_gridInfo.columnCount),CheckDirection(index,_gridInfo.columnCount));		
 	}
 
 	/*
@@ -158,7 +154,7 @@ public class MatchChecker{
 			if(IndexIsOutOfBounds(currentIndex,incrementValue)){
 				break;
 			}
-			matchFound = (_tileList[currentIndex].tileContent == _originalTileContent); 
+			matchFound = (_gridInfo.tileList[currentIndex].tileContent == _originalTileContent); 
 			if(matchFound){
 				matches++;
 			}
@@ -174,12 +170,12 @@ public class MatchChecker{
 		bool outOfBounds = false;
 		if(Mathf.Abs(increment) == 1){
 			//the check is for left-right
-			int columnId = index % _columnCount;
+			int columnId = index % _gridInfo.columnCount;
 			if(columnId == 0){//current index is the left edge of the grid
-				outOfBounds = (((index - increment) % _columnCount) == _lastColumnId);
+				outOfBounds = (((index - increment) % _gridInfo.columnCount) == _lastColumnId);
 			}
             else if (columnId == _lastColumnId){//current index is the right edge of the grid                
-				outOfBounds = (((index - increment) % _columnCount) == 0);
+				outOfBounds = (((index - increment) % _gridInfo.columnCount) == 0);
 			}
 		}
 		//The check is for up-down
@@ -200,7 +196,7 @@ public class MatchChecker{
 			}
 		}
 		if(above + below > 1){
-			for(matchIndex = startingtile-(above*_columnCount); matchIndex <= startingtile+(below*_columnCount); matchIndex+=_columnCount){
+			for(matchIndex = startingtile-(above*_gridInfo.columnCount); matchIndex <= startingtile+(below*_gridInfo.columnCount); matchIndex+=_gridInfo.columnCount){
 				_tilesMatched.Add(matchIndex);
 			}
 		}
@@ -209,9 +205,9 @@ public class MatchChecker{
 	
 	private bool CompareTileContents(int index1,int index2) {
 		bool tilesAreTheSame = false;
-		if (index1 > -1 && index1 < _columnCount * _rowCount) {
-			if (index2 > -1 && index2 < _columnCount * _rowCount) {
-				if (_tileList[index1].tileContent == _tileList[index2].tileContent) {
+		if (index1 > -1 && index1 < _gridInfo.columnCount * _gridInfo.rowCount) {
+			if (index2 > -1 && index2 < _gridInfo.columnCount * _gridInfo.rowCount) {
+				if (_gridInfo.tileList[index1].tileContent == _gridInfo.tileList[index2].tileContent) {
 					tilesAreTheSame = true;
 				}
 			}
